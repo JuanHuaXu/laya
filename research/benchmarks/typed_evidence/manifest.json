@@ -1,0 +1,20 @@
+{
+  "format": "typed-evidence-research-v1",
+  "files": {
+    "README.md": "1a4b3d0b16bffe52d757172877f6454276b8a26bf4bd6951257664593af71817",
+    "RESEARCH-SUMMARY.md": "6611f02783acb55d52ba4bdbcd73ba11a0503fe32081a65a34ab53893b4624f6",
+    "archive.json": "46e24b2a7cface561a0161dca15ae2f81b7bd83e5fc52f481e79d5d0b14a50d4",
+    "audit.py": "5186e453cd128188bbbf7f03d81a3a9e21289eed724b802778aaf14cfa683cef",
+    "constraint_kernel_oracles.py": "1054e0f923da55e7766830f2eeeb1a4319497a047997beb782e2a054c650456c",
+    "constraint_kernel_prepared.py": "bba26c53f6945b1c8dfca77ef2e8434ae7f47863d2a90b1129f9d2c7d10132e9",
+    "constraint_kernel_v6.py": "9389548f067051735297c725bca95293ea6d698424377361a25697a9bfacb58c",
+    "test_audit.py": "4e8a7ee466996108996b41e43e40cf400ff1aa9085f05e7cdd157e7e42429843",
+    "test_constraint_kernel_prepared.py": "5dc87d7cb89a10fd8193ceffc7ea7f49f9406f3200d0b57f42b2ab73bd8bf172",
+    "test_constraint_kernel_v6.py": "7c32786e428a690a9ab9608cea17ab912c7e4f478e464dc28d3991e4648f6560"
+  },
+  "protocol_sha256": "68e8dba2a0e121740b38731ccd383b0f4f19010dde22966c64cc1f73d263cddc",
+  "public_export": true,
+  "model_free": true,
+  "laya_core_changed": false,
+  "synthetic_fixtures": true
+}
