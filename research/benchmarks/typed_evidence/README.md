@@ -125,6 +125,9 @@ These are **checker** speedups, not faster Laya inference or agent response time
   compare **all non-timing output fields** to each other and archived SHA-256
   digests. The one historical typed self-comparison extension relative to legacy
   v4 is recorded explicitly, not introduced or hidden by this optimization.
+- Always replay all 14 dense/small benchmark controls too, without enabling
+  timing. Their full-output gold is anchored to the original frozen profile,
+  not regenerated from the candidate. Fresh measurements check that gold as well.
 - Check 18,744 per-claim oracles and 43,461 original-byte/witness fields.
 - Recompute every archived control/cohort timing statistic, sample identity,
   multiplicity and speedup ratio from the 11,570 raw samples in `archive.json`.
@@ -132,6 +135,13 @@ These are **checker** speedups, not faster Laya inference or agent response time
   equality conjunctions, branch isolation, authority, parsing and scope controls.
   Exhaustive weak-order tests and seeded compound-query differential tests are
   finite falsification attempts, not a formal proof.
+
+The post-publication [P1/P2 review](REVIEW-1282.md) found and repaired a P2 in the
+mandatory audit: it previously audited dense timings without executing those
+workloads. The two fault-injection regressions failed before the repair. Replay
+now covers 1,421 inputs (1,129 protocol + 278 projections + 14 controls), while
+the existing protocol/per-claim counts and every historical timing sample remain
+unchanged. An independent strict-bound oracle is included in the tests.
 
 The original full study separately reran fresh CPU inference: 1,364 Laya general
 fields, 32 effort controls, 265 entailment-model inputs and 1,232 legacy results

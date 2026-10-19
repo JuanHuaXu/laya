@@ -70,7 +70,12 @@ def verify():
         raise ValueError('protocol fixture identity/count')
     if digest(rows) != manifest['protocol_sha256']:
         raise ValueError('protocol generator differs from archived inputs')
-    return dict(rows=rows, projections=archive['projections'], archive=archive)
+    controls = archive['dense']
+    if len(controls) != 14 or len({r['id'] for r in controls}) != 14:
+        raise ValueError('dense fixture identity/count')
+    if digest(controls) != manifest['controls_sha256']:
+        raise ValueError('dense inputs differ from archived workload')
+    return dict(rows=rows, projections=archive['projections'], controls=controls, archive=archive)
 
 
 def stats(values):
@@ -117,9 +122,9 @@ def audit_samples(plan):
 def audit():
     plan = verify()
     observed, claims, byte_checks = 0, 0, 0
-    for pool in ('rows', 'projections'):
-        digests = plan['archive']['full_result_digests']['protocol' if pool == 'rows' else 'projections']
-        if set(digests) != {r['id'] for r in plan[pool]}:
+    for pool in ('rows', 'projections', 'controls'):
+        digests = plan['archive']['full_result_digests']['protocol' if pool == 'rows' else pool]
+        if len(digests) != len(plan[pool]) or set(digests) != {r['id'] for r in plan[pool]}:
             raise ValueError('full-result archive identity/count')
         for row in plan[pool]:
             kwargs = dict(row['input'], declaration=declaration(row), proposal=row.get('proposal'))
@@ -153,6 +158,7 @@ def audit():
                 raise ValueError('authority boundary')
             observed += 1
     return dict(protocol_cases=len(plan['rows']), projections=len(plan['projections']),
+                dense_controls=len(plan['controls']),
                 current_replay_observations=observed, per_claim_checks=claims,
                 original_byte_witness_checks=byte_checks, archived_timing_samples=audit_samples(plan),
                 full_result_parity=True, model_inference_performed=False,
@@ -172,6 +178,8 @@ def benchmark(repeats):
         elapsed = (time.perf_counter() - started) * 1000
         if key in outputs and outputs[key] != stable(result): raise ValueError('benchmark parity')
         outputs[key] = stable(result)
+        if digest(stable(result)) != plan['archive']['full_result_digests']['controls'][key]:
+            raise ValueError('benchmark full-result mismatch: ' + key)
         if any(result[f] != v for f, v in rows[key]['expected'].items()):
             raise ValueError('benchmark oracle')
         timings.append(dict(id=key, engine=engine, ms=elapsed))

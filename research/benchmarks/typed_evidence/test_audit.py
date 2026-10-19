@@ -1,5 +1,6 @@
 import copy
 import unittest
+from unittest.mock import patch
 
 import audit
 
@@ -30,6 +31,25 @@ class ArchiveTests(unittest.TestCase):
         self.changed(lambda b: b['summary']['distinct-claims-exact-32']['v6'].update(mean=1))
         self.changed(lambda b: b['cohorts']['invalid']['prepared'].update(p95=1))
         self.changed(lambda b: b['summary'].pop('distinct-claims-exact-32'))
+
+    def test_dense_checker_regression_is_rejected(self):
+        original = audit.prepared.check
+        def broken(**kwargs):
+            result = original(**kwargs)
+            records = [r['value'] for r in result['source_records']]
+            if sum('var' in r for r in records) == 24 and sum('left' in r for r in records) == 64:
+                return dict(result, grounding='fail')
+            return result
+        with patch.object(audit.prepared, 'check', side_effect=broken):
+            with self.assertRaisesRegex(ValueError, 'full-result mismatch: distinct-claims-exact-1'):
+                audit.audit()
+
+    def test_invalid_dense_input_is_rejected_without_timing(self):
+        plan = copy.deepcopy(self.plan)
+        plan['archive']['dense'][0]['input']['candidate'] = 'not-json'
+        with patch.object(audit, 'verify', return_value=plan):
+            with self.assertRaisesRegex(ValueError, 'full-result mismatch: distinct-claims-exact-1'):
+                audit.audit()
 
 
 if __name__ == '__main__': unittest.main()

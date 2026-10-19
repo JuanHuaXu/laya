@@ -90,9 +90,54 @@ class PreparedTests(unittest.TestCase):
             self.assertEqual(calls.call_count, 2)
         self.assertIs(candidate.TypedDeclaration, reference.TypedDeclaration)
 
+    def test_independent_strict_bound_oracle(self):
+        # Independent Bellman-Ford over symbolic epsilon; enumerate != branches.
+        def possible(atoms):
+            excluded = [a for a in atoms if a[1] == '!=']
+            ordinary = [a for a in atoms if a[1] != '!=']
+            for directions in itertools.product(('<', '>'), repeat=len(excluded)):
+                expanded = ordinary + [(a, op, b, c) for (a, _, b, c), op in zip(excluded, directions)]
+                edges = []
+                for a, op, b, c in expanded:
+                    if op in ('<', '<=', '='): edges.append((b, a, (c, -int(op == '<'))))
+                    if op in ('>', '>=', '='): edges.append((a, b, (-c, -int(op == '>'))))
+                nodes = {n for e in edges for n in e[:2]}
+                distance = {n: (Q(0), 0) for n in nodes}
+                for _ in range(len(nodes)):
+                    changed = False
+                    for u, v, bound in edges:
+                        value = (distance[u][0] + bound[0], distance[u][1] + bound[1])
+                        if value < distance[v]: distance[v] = value; changed = True
+                    if not changed: return True
+                if not edges: return True
+            return False
+        self.assertFalse(possible([('a', '<', 'a', Q(0))]))
+        self.assertFalse(possible([('a', '!=', 'a', Q(0))]))
+        self.assertTrue(possible([('a', '>', None, Q(0)), ('a', '<', None, Q(1)),
+                                  ('a', '!=', None, Q(1, 2))]))
+        rng = random.Random(12821018); names = ('a', 'b', 'c', 'd')
+        ops = {'<': lambda a,b:a<b, '<=': lambda a,b:a<=b, '=': lambda a,b:a==b,
+               '!=': lambda a,b:a!=b, '>=': lambda a,b:a>=b, '>': lambda a,b:a>b}
+        for _ in range(240):
+            witness = {n: Q(rng.randrange(-5, 6), rng.randrange(1, 6)) for n in names}
+            witness[None] = Q(0); source = []
+            while len(source) < 10:
+                a, b = rng.choice(names), rng.choice(names + (None,))
+                op = rng.choice(tuple(ops))
+                q = witness[a] - witness[b] + Q(rng.randrange(-2, 3), rng.randrange(1, 6))
+                if op == '!=' and sum(t[1] == '!=' for t in source) >= 2: continue
+                if ops[op](witness[a] - witness[b], q): source.append((a, op, b, q))
+            state = candidate._prepare(source, rng.sample(names, len(names)))
+            self.assertIsNotNone(state); self.assertTrue(possible(source)); snapshot = state.matrix
+            for _ in range(12):
+                query = [(rng.choice(names), rng.choice(tuple(ops)), rng.choice(names + (None,)),
+                          Q(rng.randrange(-3, 4), rng.randrange(1, 6))) for _ in range(rng.randrange(1, 4))]
+                self.assertEqual(state.feasible(query), possible(source + query), (source, query))
+                self.assertEqual(state.matrix, snapshot)
+
     def test_full_frozen_outputs(self):
         plan = study.verify()
-        for row in plan['rows']+plan['projections']:
+        for row in plan['rows']+plan['projections']+plan['controls']:
             declaration = study.declaration(row)
             kwargs = dict(row['input'], declaration=declaration, proposal=row.get('proposal'))
             self.assertEqual(study.stable(candidate.check(**kwargs)), study.stable(reference.check(**kwargs)), row['id'])
